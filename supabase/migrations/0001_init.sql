@@ -1,20 +1,33 @@
 -- HGC Demandas — schema inicial
 create extension if not exists pgcrypto;
 
--- Quem pode administrar a plataforma (login HGC)
-create table public.admins (
-  email text primary key
+-- Chave do servidor: o app envia no cabeçalho x-hgc-key e as políticas conferem.
+-- O valor é inserido na configuração (não fica no repositório):
+--   insert into private.app_secret (key) values ('<HGC_DB_KEY>');
+create schema if not exists private;
+revoke all on schema private from public, anon, authenticated;
+create table private.app_secret (
+  id boolean primary key default true check (id),
+  key text not null
 );
 
-create or replace function public.is_admin()
+create or replace function public.has_app_key()
 returns boolean
-language sql stable security definer set search_path = public
+language sql stable security definer set search_path = ''
 as $$
   select exists (
-    select 1 from public.admins
-    where lower(email) = lower(coalesce(auth.jwt() ->> 'email', ''))
+    select 1 from private.app_secret s
+    where s.key = coalesce(current_setting('request.headers', true)::json ->> 'x-hgc-key', '')
   );
 $$;
+
+-- Tentativas de login erradas (limite por IP)
+create table public.login_attempts (
+  id bigint generated always as identity primary key,
+  ip text not null,
+  created_at timestamptz not null default now()
+);
+create index login_attempts_ip_idx on public.login_attempts(ip, created_at);
 
 -- Clientes: cada um tem um link de acompanhamento (share_token)
 create table public.clients (
@@ -80,20 +93,20 @@ end $$;
 create trigger requests_touch before update on public.requests
   for each row execute function public.touch_request();
 
--- RLS: tabelas só acessíveis pelo admin logado
-alter table public.admins enable row level security;
+-- RLS: tabelas só acessíveis pelo servidor do app (com a chave)
 alter table public.clients enable row level security;
 alter table public.requests enable row level security;
 alter table public.request_updates enable row level security;
+alter table public.login_attempts enable row level security;
 
-create policy admin_all on public.clients for all to authenticated
-  using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy admin_all on public.requests for all to authenticated
-  using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy admin_all on public.request_updates for all to authenticated
-  using ((select public.is_admin())) with check ((select public.is_admin()));
-create policy admin_read on public.admins for select to authenticated
-  using ((select public.is_admin()));
+create policy app_all on public.clients for all to anon
+  using ((select public.has_app_key())) with check ((select public.has_app_key()));
+create policy app_all on public.requests for all to anon
+  using ((select public.has_app_key())) with check ((select public.has_app_key()));
+create policy app_all on public.request_updates for all to anon
+  using ((select public.has_app_key())) with check ((select public.has_app_key()));
+create policy app_all on public.login_attempts for all to anon
+  using ((select public.has_app_key())) with check ((select public.has_app_key()));
 
 -- Portal do cliente: acesso apenas via token, por funções controladas
 create or replace function public.portal_get(p_token text)
@@ -196,5 +209,5 @@ revoke all on function public.portal_comment(text, uuid, text) from public;
 grant execute on function public.portal_get(text) to anon, authenticated;
 grant execute on function public.portal_create_request(text, text, text, text) to anon, authenticated;
 grant execute on function public.portal_comment(text, uuid, text) to anon, authenticated;
-revoke all on function public.is_admin() from public, anon;
-grant execute on function public.is_admin() to authenticated;
+revoke all on function public.has_app_key() from public;
+grant execute on function public.has_app_key() to anon;

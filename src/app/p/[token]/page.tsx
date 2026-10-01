@@ -135,7 +135,7 @@ export default async function PortalPage({
                   ))}
                 </select>
               </div>
-              <SubmitButton>Enviar solicitação</SubmitButton>
+              <SubmitButton pendingText="Enviando…">Enviar solicitação</SubmitButton>
             </form>
           </div>
         )}
@@ -220,7 +220,7 @@ function Section({
                 className="input"
                 placeholder={r.status === "revisao" ? "Aprovado? Algum ajuste?" : "Escreva uma mensagem…"}
               />
-              <SubmitButton className="btn">Enviar</SubmitButton>
+              <SubmitButton className="btn" pendingText="Enviando…">Enviar</SubmitButton>
             </form>
           )}
         </details>

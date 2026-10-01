@@ -6,7 +6,7 @@ e compartilhar o andamento com cada cliente por um link.
 
 ## Como funciona
 
-- **Painel (HGC)** — login por link mágico no e-mail. Cadastre clientes, registre demandas
+- **Painel** — entrada por código de acesso (sem e-mail). Cadastre clientes, registre demandas
   (colando a mensagem original do WhatsApp), mude o status e registre o andamento.
 - **Avisar o cliente** — cada demanda gera uma mensagem pronta com status + link,
   para copiar ou abrir direto no WhatsApp do cliente.
@@ -21,13 +21,12 @@ Next.js 16 (App Router) · Supabase (Postgres + Auth + RLS) · Vercel.
 
 ## Configuração
 
-1. Crie um projeto no Supabase e rode os SQLs de `supabase/migrations/` em ordem.
-2. Em **Authentication → URL Configuration**, defina o *Site URL* com a URL da Vercel e
-   adicione `https://SEU-DOMINIO/auth/callback` em *Redirect URLs*.
-3. Variáveis de ambiente (veja `.env.example`):
-   - `NEXT_PUBLIC_SUPABASE_URL`
-   - `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
-   - `ADMIN_EMAILS` — e-mails que podem entrar no painel (também precisam estar na tabela `admins`).
+1. Crie um projeto no Supabase e rode `supabase/migrations/0001_init.sql`.
+2. Gere um valor aleatório para `HGC_DB_KEY` e grave no banco:
+   `insert into private.app_secret (key) values ('<HGC_DB_KEY>');`
+3. Variáveis de ambiente na Vercel (veja `.env.example`): `SUPABASE_URL`,
+   `SUPABASE_PUBLISHABLE_KEY`, `HGC_DB_KEY`, `ACCESS_CODE` (código da tela de login)
+   e `SESSION_SECRET`.
 
 ```bash
 npm install
@@ -36,7 +35,10 @@ npm run dev
 
 ## Segurança
 
-Todas as tabelas têm RLS: só e-mails na tabela `admins` leem/escrevem.
-O portal do cliente acessa os dados apenas pelas funções `portal_get`, `portal_create_request`
-e `portal_comment`, que validam o token do cliente. Notas marcadas como internas nunca
-aparecem no portal.
+- O navegador nunca fala com o Supabase: tudo passa pelo servidor do Next.js, que envia
+  a chave `x-hgc-key`. As políticas RLS só liberam as tabelas com essa chave.
+- Login por código: sessão em cookie assinado (30 dias) e bloqueio de 15 min após
+  5 tentativas erradas no mesmo IP.
+- O portal do cliente (`/p/<token>`) usa só as funções `portal_get`,
+  `portal_create_request` e `portal_comment`, que validam o token. Notas internas
+  nunca aparecem no portal.
