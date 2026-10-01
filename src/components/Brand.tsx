@@ -6,6 +6,8 @@ export function Brand({ dark = true }: { dark?: boolean }) {
       <span className="brand-name" style={dark ? undefined : { color: "var(--ink)" }}>
         HGC <span>Demandas</span>
       </span>
+      <span className="brand-sep" aria-hidden />
+      <img src="/gm-sports-logo.png" alt="GM Sports FC" className="client-logo" />
     </span>
   );
 }

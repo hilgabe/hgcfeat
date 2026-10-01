@@ -6,7 +6,7 @@ export default function NotFound() {
       <div className="auth-card">
         <Brand dark={false} />
         <h1 style={{ fontSize: 22 }}>Página não encontrada</h1>
-        <p className="muted">O link pode ter expirado ou sido alterado. Peça um novo link à HGC.</p>
+        <p className="muted">Confira o endereço ou volte para a página inicial.</p>
       </div>
     </main>
   );

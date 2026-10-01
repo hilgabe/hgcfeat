@@ -16,8 +16,6 @@ export type Client = {
   whatsapp: string | null;
   system_name: string | null;
   system_url: string | null;
-  share_token: string;
-  allow_client_requests: boolean;
   created_at: string;
 };
 
@@ -45,7 +43,6 @@ export type Update = {
   request_id: string;
   body: string | null;
   status_to: Status | null;
-  public: boolean;
   author: "hgc" | "cliente";
   created_at: string;
 };
@@ -84,8 +81,10 @@ export const PRIORITIES: Record<Priority, string> = {
 
 export const SOURCES: Record<Source, string> = {
   whatsapp: "WhatsApp",
-  cliente: "Portal do cliente",
+  cliente: "Pedido direto no painel",
   interno: "Interno",
 };
 
 export const code = (n: number) => `HGC-${String(n).padStart(3, "0")}`;
+
+export const AUTHORS = { hgc: "HGC", cliente: "GM Sports" } as const;

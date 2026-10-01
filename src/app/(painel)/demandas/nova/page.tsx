@@ -1,28 +1,13 @@
-import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { PRIORITIES, SOURCES, TYPES } from "@/lib/types";
+import { AuthorPicker } from "@/components/AuthorPicker";
 import { SubmitButton } from "@/components/SubmitButton";
 import { createRequestAction } from "../../actions";
 
 export const metadata = { title: "Nova demanda" };
 
-export default async function NovaDemanda({
-  searchParams,
-}: {
-  searchParams: Promise<{ cliente?: string }>;
-}) {
-  const { cliente } = await searchParams;
-  const { supabase } = await requireAdmin();
-  const { data: clients } = await supabase.from("clients").select("id, name, company").order("name");
-
-  if (!clients?.length) {
-    return (
-      <div className="card empty">
-        <p>Cadastre um cliente antes de registrar demandas.</p>
-        <Link href="/clientes" className="btn btn-primary">Cadastrar cliente</Link>
-      </div>
-    );
-  }
+export default async function NovaDemanda() {
+  await requireAdmin();
 
   return (
     <>
@@ -36,14 +21,14 @@ export default async function NovaDemanda({
       <form action={createRequestAction} className="grid-2">
         <div className="card">
           <div className="field">
-            <label htmlFor="original_message">Mensagem do cliente</label>
+            <label htmlFor="original_message">Mensagem original (WhatsApp)</label>
             <textarea
               id="original_message"
               name="original_message"
               className="textarea"
-              placeholder="Cole aqui o que o cliente mandou no WhatsApp…"
+              placeholder="Cole aqui a mensagem do WhatsApp com o pedido…"
             />
-            <span className="hint">Fica guardada como referência do pedido original (só você vê).</span>
+            <span className="hint">Fica guardada como referência do pedido original.</span>
           </div>
           <div className="field">
             <label htmlFor="title">Título da demanda *</label>
@@ -57,7 +42,7 @@ export default async function NovaDemanda({
             />
           </div>
           <div className="field">
-            <label htmlFor="description">Descrição (o cliente vê)</label>
+            <label htmlFor="description">Descrição</label>
             <textarea
               id="description"
               name="description"
@@ -68,18 +53,7 @@ export default async function NovaDemanda({
         </div>
 
         <div className="card">
-          <div className="field">
-            <label htmlFor="client_id">Cliente *</label>
-            <select id="client_id" name="client_id" required className="select" defaultValue={cliente ?? ""}>
-              <option value="" disabled>Selecione…</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                  {c.company ? ` — ${c.company}` : ""}
-                </option>
-              ))}
-            </select>
-          </div>
+          <AuthorPicker />
           <div className="field">
             <label htmlFor="type">Tipo</label>
             <select id="type" name="type" className="select" defaultValue="funcionalidade">

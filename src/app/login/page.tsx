@@ -59,9 +59,9 @@ export default async function LoginPage({
     <main className="auth-wrap">
       <div className="auth-card">
         <Brand dark={false} />
-        <h1 style={{ fontSize: 22 }}>Entrar no painel</h1>
+        <h1 style={{ fontSize: 22 }}>Demandas GM Sports</h1>
         <p className="muted small" style={{ marginTop: 6 }}>
-          Digite o código de acesso.
+          Acompanhamento das solicitações do sistema GM Sports. Digite o código de acesso.
         </p>
         {erro && (
           <div className="notice notice-err">

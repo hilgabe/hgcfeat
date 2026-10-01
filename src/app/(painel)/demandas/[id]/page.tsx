@@ -3,14 +3,16 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { fmtDate, fmtDateTime, waLink } from "@/lib/format";
 import { siteUrl } from "@/lib/site";
+import { getClient } from "@/lib/client";
+import { AuthorPicker } from "@/components/AuthorPicker";
 import {
+  AUTHORS,
   PRIORITIES,
   SOURCES,
   STATUS,
   STATUS_ORDER,
   TYPES,
   code,
-  type Client,
   type Demand,
   type Update,
 } from "@/lib/types";
@@ -26,9 +28,9 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
 
   const { data: r } = await supabase
     .from("requests")
-    .select("*, clients(*)")
+    .select("*")
     .eq("id", id)
-    .maybeSingle<Demand & { clients: Client }>();
+    .maybeSingle<Demand>();
   if (!r) notFound();
 
   const { data: updates } = await supabase
@@ -38,9 +40,9 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
     .order("created_at", { ascending: false })
     .returns<Update[]>();
 
-  const client = r.clients;
-  const portal = `${await siteUrl()}/p/${client.share_token}`;
-  const lastNote = updates?.find((u) => u.public && u.author === "hgc" && u.body)?.body;
+  const client = await getClient(supabase);
+  const link = `${await siteUrl()}/demandas/${r.id}`;
+  const lastNote = updates?.find((u) => u.author === "hgc" && u.body)?.body;
   const firstName = client.name.split(" ")[0];
   const message = [
     `Olá, ${firstName}! 👋`,
@@ -50,7 +52,7 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
     lastNote ? `\n${lastNote}` : null,
     r.status === "entregue" && r.delivered_url ? `\nVeja aqui: ${r.delivered_url}` : null,
     ``,
-    `Acompanhe todas as suas demandas: ${portal}`,
+    `Detalhes no painel: ${link}`,
     ``,
     `— HGC`,
   ]
@@ -71,8 +73,7 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
           <h1>{r.title}</h1>
           <div className="small muted" style={{ marginTop: 6, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}>
             <StatusChip status={r.status} />
-            <Link href={`/clientes/${client.id}`} className="link-btn">{client.name}</Link>
-            <span>· {TYPES[r.type]}</span>
+            <span>{TYPES[r.type]}</span>
             <span>· via {SOURCES[r.source]}</span>
             <span>· aberta em {fmtDate(r.created_at)}</span>
           </div>
@@ -109,6 +110,7 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
                     ))}
                   </select>
                 </div>
+                <AuthorPicker />
               </div>
               <div className="field">
                 <label htmlFor="body">Mensagem</label>
@@ -119,12 +121,7 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
                   placeholder="Ex.: Botão criado no ambiente de testes, falta só publicar."
                 />
               </div>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
-                <label className="check">
-                  <input type="checkbox" name="private" /> Nota interna (cliente não vê)
-                </label>
-                <SubmitButton>Salvar andamento</SubmitButton>
-              </div>
+              <SubmitButton>Salvar andamento</SubmitButton>
             </form>
           </div>
 
@@ -139,9 +136,8 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
                 >
                   <div className="meta">
                     <span>{fmtDateTime(u.created_at)}</span>
-                    <span>· {u.author === "cliente" ? client.name : "HGC"}</span>
+                    <span>· {AUTHORS[u.author]}</span>
                     {u.status_to && <StatusChip status={u.status_to} />}
-                    {!u.public && <span className="private">INTERNO</span>}
                   </div>
                   {u.body && <div className="body">{u.body}</div>}
                 </li>
@@ -152,9 +148,9 @@ export default async function DemandaPage({ params }: { params: Promise<{ id: st
 
         <aside>
           <div className="card">
-            <h2>Avisar o cliente</h2>
+            <h2>Avisar no WhatsApp</h2>
             <p className="small muted" style={{ marginTop: -6 }}>
-              Mensagem pronta com o status atual e o link de acompanhamento.
+              Mensagem pronta com o status atual e o link desta demanda.
             </p>
             <pre className="quote" style={{ margin: "0 0 12px", fontFamily: "inherit" }}>{message}</pre>
             <div className="btn-row">

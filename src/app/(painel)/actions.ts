@@ -3,68 +3,46 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
+import { getClient } from "@/lib/client";
 
 const str = (f: FormData, k: string) => {
   const v = String(f.get(k) ?? "").trim();
   return v === "" ? null : v;
 };
 
-/* ---------- Clientes ---------- */
+const author = (f: FormData) => (f.get("author") === "cliente" ? "cliente" : "hgc");
 
-export async function createClientAction(formData: FormData) {
-  const { supabase } = await requireAdmin();
-  const { data, error } = await supabase
-    .from("clients")
-    .insert({
-      name: str(formData, "name") ?? "Sem nome",
-      company: str(formData, "company"),
-      whatsapp: str(formData, "whatsapp"),
-      system_name: str(formData, "system_name"),
-      system_url: str(formData, "system_url"),
-    })
-    .select("id")
-    .single();
-  if (error) throw new Error(error.message);
-  revalidatePath("/clientes");
-  redirect(`/clientes/${data.id}`);
-}
+/* ---------- Cliente ---------- */
 
-export async function updateClientAction(id: string, formData: FormData) {
+export async function updateClientAction(formData: FormData) {
   const { supabase } = await requireAdmin();
+  const client = await getClient(supabase);
   const { error } = await supabase
     .from("clients")
     .update({
-      name: str(formData, "name") ?? "Sem nome",
+      name: str(formData, "name") ?? client.name,
       company: str(formData, "company"),
       whatsapp: str(formData, "whatsapp"),
       system_name: str(formData, "system_name"),
       system_url: str(formData, "system_url"),
-      allow_client_requests: formData.get("allow_client_requests") === "on",
     })
-    .eq("id", id);
+    .eq("id", client.id);
   if (error) throw new Error(error.message);
-  revalidatePath(`/clientes/${id}`);
-}
-
-export async function regenerateTokenAction(id: string) {
-  const { supabase } = await requireAdmin();
-  const token = Array.from(crypto.getRandomValues(new Uint8Array(12)))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-  const { error } = await supabase.from("clients").update({ share_token: token }).eq("id", id);
-  if (error) throw new Error(error.message);
-  revalidatePath(`/clientes/${id}`);
+  revalidatePath("/", "layout");
+  redirect("/configuracoes?salvo=1");
 }
 
 /* ---------- Demandas ---------- */
 
 export async function createRequestAction(formData: FormData) {
   const { supabase } = await requireAdmin();
+  const client = await getClient(supabase);
   const hours = str(formData, "estimate_hours");
+  const who = author(formData);
   const { data, error } = await supabase
     .from("requests")
     .insert({
-      client_id: str(formData, "client_id"),
+      client_id: client.id,
       title: str(formData, "title") ?? "Sem título",
       description: str(formData, "description"),
       original_message: str(formData, "original_message"),
@@ -77,9 +55,12 @@ export async function createRequestAction(formData: FormData) {
     .select("id")
     .single();
   if (error) throw new Error(error.message);
-  await supabase
-    .from("request_updates")
-    .insert({ request_id: data.id, body: "Solicitação registrada.", status_to: "recebida" });
+  await supabase.from("request_updates").insert({
+    request_id: data.id,
+    body: "Solicitação registrada.",
+    status_to: "recebida",
+    author: who,
+  });
   revalidatePath("/");
   redirect(`/demandas/${data.id}`);
 }
@@ -115,12 +96,14 @@ export async function addUpdateAction(id: string, formData: FormData) {
   if (changed) {
     const { error } = await supabase.from("requests").update({ status }).eq("id", id);
     if (error) throw new Error(error.message);
+  } else {
+    await supabase.from("requests").update({ updated_at: new Date().toISOString() }).eq("id", id);
   }
   const { error } = await supabase.from("request_updates").insert({
     request_id: id,
     body,
     status_to: changed ? status : null,
-    public: formData.get("private") !== "on",
+    author: author(formData),
   });
   if (error) throw new Error(error.message);
   revalidatePath(`/demandas/${id}`);

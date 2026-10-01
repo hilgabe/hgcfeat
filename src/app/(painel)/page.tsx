@@ -1,27 +1,26 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { fmtDate } from "@/lib/format";
+import { getClient } from "@/lib/client";
 import { STATUS, STATUS_ORDER, TYPES, code, type Demand, type Status } from "@/lib/types";
 import { PriorityTag, StatusChip } from "@/components/StatusChip";
 
-type Row = Demand & { clients: { name: string } | null };
 
 export default async function Dashboard({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; cliente?: string }>;
+  searchParams: Promise<{ status?: string }>;
 }) {
-  const { status, cliente } = await searchParams;
+  const { status } = await searchParams;
   const { supabase } = await requireAdmin();
+  const client = await getClient(supabase);
 
-  const [{ data: all }, { data: clients }] = await Promise.all([
-    supabase
-      .from("requests")
-      .select("*, clients(name)")
-      .order("updated_at", { ascending: false })
-      .returns<Row[]>(),
-    supabase.from("clients").select("id, name").order("name"),
-  ]);
+  const { data: all } = await supabase
+    .from("requests")
+    .select("*")
+    .eq("client_id", client.id)
+    .order("updated_at", { ascending: false })
+    .returns<Demand[]>();
 
   const rows = all ?? [];
   const counts = Object.fromEntries(
@@ -30,26 +29,33 @@ export default async function Dashboard({
 
   const active = !status || status === "abertas";
   const filtered = rows.filter((r) => {
-    if (cliente && r.client_id !== cliente) return false;
     if (active) return r.status !== "entregue" && r.status !== "cancelada";
     if (status === "todas") return true;
     return r.status === status;
   });
 
   const href = (s?: string) => {
-    const p = new URLSearchParams();
-    if (s) p.set("status", s);
-    if (cliente) p.set("cliente", cliente);
-    const q = p.toString();
-    return q ? `/?${q}` : "/";
+    return s ? `/?status=${s}` : "/";
   };
 
   return (
     <>
       <div className="page-head">
         <div>
-          <p className="eyebrow">Painel</p>
+          <p className="eyebrow">{client.name}</p>
           <h1>Demandas</h1>
+          {client.system_name && (
+            <p className="muted small" style={{ margin: "4px 0 0" }}>
+              Melhorias e ajustes no{" "}
+              {client.system_url ? (
+                <a href={client.system_url} target="_blank" rel="noreferrer" className="link-btn">
+                  {client.system_name}
+                </a>
+              ) : (
+                client.system_name
+              )}
+            </p>
+          )}
         </div>
         <Link href="/demandas/nova" className="btn btn-primary">
           + Nova demanda
@@ -69,20 +75,12 @@ export default async function Dashboard({
       </div>
 
       <form className="filters" method="get">
-        <select name="status" defaultValue={status ?? "abertas"} className="select">
+        <select name="status" defaultValue={status ?? "abertas"} className="select" aria-label="Filtrar por status">
           <option value="abertas">Em aberto</option>
           <option value="todas">Todas</option>
           {STATUS_ORDER.map((s) => (
             <option key={s} value={s}>
               {STATUS[s].label}
-            </option>
-          ))}
-        </select>
-        <select name="cliente" defaultValue={cliente ?? ""} className="select">
-          <option value="">Todos os clientes</option>
-          {clients?.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.name}
             </option>
           ))}
         </select>
@@ -93,7 +91,7 @@ export default async function Dashboard({
         <div className="list-row list-head">
           <span>Código</span>
           <span>Demanda</span>
-          <span className="hide-sm">Cliente</span>
+          <span className="hide-sm">Atualizada</span>
           <span>Status</span>
           <span className="hide-sm">Prazo</span>
         </div>
@@ -118,7 +116,7 @@ export default async function Dashboard({
                 {TYPES[r.type]} <PriorityTag priority={r.priority} />
               </div>
             </span>
-            <span className="hide-sm small">{r.clients?.name}</span>
+            <span className="hide-sm small muted">{fmtDate(r.updated_at)}</span>
             <span><StatusChip status={r.status} /></span>
             <span className="hide-sm small muted">{fmtDate(r.due_date)}</span>
           </Link>

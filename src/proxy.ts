@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, isValidSession } from "@/lib/session";
 
-const PUBLIC_PATHS = ["/login", "/p/"];
+const PUBLIC_PATHS = ["/login"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -17,5 +17,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|icon.png|hgc-mark.*\.png|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|icon.png|hgc-mark.*\\.png|gm-sports-logo\\.png|favicon.ico).*)"],
 };
