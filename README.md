@@ -16,16 +16,18 @@ que normalmente chegam pelo WhatsApp.
 
 ## Stack
 
-Next.js 16 (App Router) · Supabase (Postgres + Auth + RLS) · Vercel.
+Next.js 16 (App Router) · Firebase Firestore (Admin SDK) · Vercel.
 
 ## Configuração
 
-1. Crie um projeto no Supabase e rode os SQLs de `supabase/migrations/` em ordem.
-2. Gere um valor aleatório para `HGC_DB_KEY` e grave no banco:
-   `insert into private.app_secret (key) values ('<HGC_DB_KEY>');`
-3. Variáveis de ambiente na Vercel (veja `.env.example`): `SUPABASE_URL`,
-   `SUPABASE_PUBLISHABLE_KEY`, `HGC_DB_KEY`, `ACCESS_CODE` (código da tela de login)
+1. No [Firebase Console](https://console.firebase.google.com), crie um projeto e ative o **Firestore** (modo produção).
+2. Publique as regras fechadas: `firebase deploy --only firestore:rules` (arquivo `firestore.rules`).
+3. Em *Configurações do projeto → Contas de serviço*, gere uma chave privada (JSON).
+4. Variáveis de ambiente na Vercel (veja `.env.example`): `FIREBASE_PROJECT_ID`,
+   `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`, `ACCESS_CODE` (código da tela de login)
    e `SESSION_SECRET`.
+
+O cliente GM Sports é criado automaticamente no primeiro acesso.
 
 ```bash
 npm install
@@ -34,7 +36,7 @@ npm run dev
 
 ## Segurança
 
-- O navegador nunca fala com o Supabase: tudo passa pelo servidor do Next.js, que envia
-  a chave `x-hgc-key`. As políticas RLS só liberam as tabelas com essa chave.
+- O navegador nunca fala com o Firebase: tudo passa pelo servidor do Next.js (Admin SDK).
+  As regras do Firestore bloqueiam qualquer acesso direto de cliente.
 - Login por código: sessão em cookie assinado (30 dias) e bloqueio de 15 min após
   5 tentativas erradas no mesmo IP.

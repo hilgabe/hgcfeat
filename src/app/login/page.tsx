@@ -2,7 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { Brand } from "@/components/Brand";
 import { SubmitButton } from "@/components/SubmitButton";
-import { createClient } from "@/lib/supabase/server";
+import { addLoginFail, clearLoginFails, countLoginFails } from "@/lib/data";
 import {
   SESSION_COOKIE,
   SESSION_MAX_AGE,
@@ -21,23 +21,16 @@ async function enter(formData: FormData) {
   const code = String(formData.get("code") ?? "").replace(/\D/g, "");
   const h = await headers();
   const ip = (h.get("x-forwarded-for") ?? "local").split(",")[0].trim();
-  const supabase = await createClient();
 
-  const since = new Date(Date.now() - WINDOW_MIN * 60_000).toISOString();
-  const { count } = await supabase
-    .from("login_attempts")
-    .select("*", { count: "exact", head: true })
-    .eq("ip", ip)
-    .gte("created_at", since);
-  if ((count ?? 0) >= MAX_FAILS) redirect("/login?erro=bloqueado");
+  if ((await countLoginFails(ip, WINDOW_MIN * 60_000)) >= MAX_FAILS) redirect("/login?erro=bloqueado");
 
   const expected = process.env.ACCESS_CODE ?? "";
   if (!expected || !safeEqual(code, expected)) {
-    await supabase.from("login_attempts").insert({ ip });
+    await addLoginFail(ip);
     redirect("/login?erro=codigo");
   }
 
-  await supabase.from("login_attempts").delete().eq("ip", ip);
+  await clearLoginFails(ip);
   (await cookies()).set(SESSION_COOKIE, await createSessionValue(), {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",

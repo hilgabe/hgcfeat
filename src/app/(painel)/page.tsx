@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { fmtDate } from "@/lib/format";
-import { getClient } from "@/lib/client";
-import { STATUS, STATUS_ORDER, TYPES, code, type Demand, type Status } from "@/lib/types";
+import { getClient, listRequests } from "@/lib/data";
+import { STATUS, STATUS_ORDER, TYPES, code, type Status } from "@/lib/types";
 import { PriorityTag, StatusChip } from "@/components/StatusChip";
 
 
@@ -12,17 +12,8 @@ export default async function Dashboard({
   searchParams: Promise<{ status?: string }>;
 }) {
   const { status } = await searchParams;
-  const { supabase } = await requireAdmin();
-  const client = await getClient(supabase);
-
-  const { data: all } = await supabase
-    .from("requests")
-    .select("*")
-    .eq("client_id", client.id)
-    .order("updated_at", { ascending: false })
-    .returns<Demand[]>();
-
-  const rows = all ?? [];
+  await requireAdmin();
+  const [client, rows] = await Promise.all([getClient(), listRequests()]);
   const counts = Object.fromEntries(
     STATUS_ORDER.map((s) => [s, rows.filter((r) => r.status === s).length]),
   ) as Record<Status, number>;

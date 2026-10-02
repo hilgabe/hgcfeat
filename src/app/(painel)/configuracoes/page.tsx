@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/auth";
-import { getClient } from "@/lib/client";
+import { getClient } from "@/lib/data";
 import { siteUrl } from "@/lib/site";
 import { CopyButton } from "@/components/CopyButton";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -13,8 +13,8 @@ export default async function Configuracoes({
   searchParams: Promise<{ salvo?: string }>;
 }) {
   const { salvo } = await searchParams;
-  const { supabase } = await requireAdmin();
-  const c = await getClient(supabase);
+  await requireAdmin();
+  const c = await getClient();
   const url = await siteUrl();
 
   return (

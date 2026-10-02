@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
 import { fmtDate, fmtDateTime, waLink } from "@/lib/format";
 import { siteUrl } from "@/lib/site";
-import { getClient } from "@/lib/client";
+import { getClient, getRequest, listUpdates } from "@/lib/data";
 import { AuthorPicker } from "@/components/AuthorPicker";
 import {
   AUTHORS,
@@ -13,8 +13,6 @@ import {
   STATUS_ORDER,
   TYPES,
   code,
-  type Demand,
-  type Update,
 } from "@/lib/types";
 import { Progress, StatusChip } from "@/components/StatusChip";
 import { CopyButton } from "@/components/CopyButton";
@@ -24,23 +22,11 @@ import { addUpdateAction, deleteRequestAction, updateRequestAction } from "../..
 
 export default async function DemandaPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const { supabase } = await requireAdmin();
+  await requireAdmin();
 
-  const { data: r } = await supabase
-    .from("requests")
-    .select("*")
-    .eq("id", id)
-    .maybeSingle<Demand>();
+  const r = await getRequest(id);
   if (!r) notFound();
-
-  const { data: updates } = await supabase
-    .from("request_updates")
-    .select("*")
-    .eq("request_id", id)
-    .order("created_at", { ascending: false })
-    .returns<Update[]>();
-
-  const client = await getClient(supabase);
+  const [updates, client] = await Promise.all([listUpdates(id), getClient()]);
   const link = `${await siteUrl()}/demandas/${r.id}`;
   const lastNote = updates?.find((u) => u.author === "hgc" && u.body)?.body;
   const firstName = client.name.split(" ")[0];
