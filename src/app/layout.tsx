@@ -10,8 +10,8 @@ const barlow = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: { default: "GM Sports · Demandas", template: "%s · GM Sports · HGC" },
-  description: "Acompanhamento das demandas da GM Sports, desenvolvidas pela HGC.",
+  title: { default: "HGC Feat · GM Sports", template: "%s · HGC Feat · GM Sports" },
+  description: "HGC Feat: acompanhamento colaborativo das features e solicitações da GM Sports, desenvolvidas pela HGC.",
   robots: { index: false, follow: false },
 };
 

@@ -59,7 +59,7 @@ export default async function LoginPage({
     <main className="auth-wrap">
       <div className="auth-card">
         <Brand dark={false} />
-        <h1 style={{ fontSize: 22 }}>Demandas GM Sports</h1>
+        <h1 style={{ fontSize: 22 }}>HGC Feat × GM Sports</h1>
         <p className="muted small" style={{ marginTop: 6 }}>
           Acompanhamento das solicitações do sistema GM Sports. Digite o código de acesso.
         </p>

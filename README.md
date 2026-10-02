@@ -1,4 +1,4 @@
-# HGC Demandas — GM Sports
+# HGC Feat — GM Sports
 
 Painel da HGC para registrar e acompanhar as **demandas de desenvolvimento sob medida**
 (change requests) da **GM Sports FC** — melhorias e ajustes no sistema GM Sports Gestão,
